@@ -78,6 +78,7 @@ Visual Studio Code: Mở thư mục root và gõ code .
 ## 📂 Cấu trúc thư mục
 Plaintext
 
+```bash
 Agora/
 ├── Agora.sln                # Solution file
 ├── Agora.Domain/            # Core Entities & Domain Logic
@@ -87,3 +88,4 @@ Agora/
 ├── Agora.Payment/           # Payment Processing Module
 ├── Agora.API/               # REST API Layer
 └── .gitignore               # Git ignore rules
+```
