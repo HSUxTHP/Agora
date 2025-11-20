@@ -76,16 +76,21 @@ Visual Studio: Mở file Agora.sln.
 Visual Studio Code: Mở thư mục root và gõ code .
 
 ## 📂 Cấu trúc thư mục
-Plaintext
-
 ```bash
 Agora/
-├── Agora.sln                # Solution file
-├── Agora.Domain/            # Core Entities & Domain Logic
-├── Agora.Application/       # Business Services & Use Cases
-├── Agora.Infrastructure/    # Data Access & External Libs
-├── Agora.Auth/              # Authentication Module
-├── Agora.Payment/           # Payment Processing Module
-├── Agora.API/               # REST API Layer
-└── .gitignore               # Git ignore rules
+├── Agora.sln               # Solution file
+├── Agora.Domain/           # Core Entities & Domain Logic
+├── Agora.Application/      # Business Services & Use Cases
+├── Agora.Infrastructure/   # Data Access & External Libs
+├── Agora.Auth/             # Authentication Module
+├── Agora.Payment/          # Payment Processing Module
+├── Agora.API/              # REST API Layer
+├── doc/                    # Doc
+└── .gitignore              # Git ignore rules
 ```
+
+## Connection Layer
+<p align="center">
+  <img src="doc/LayerConnect.png" width="400">
+</p>
+
