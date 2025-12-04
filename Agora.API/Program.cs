@@ -63,9 +63,10 @@ try
     builder.Services.AddInfrastructure(builder.Configuration);
 
 
-    builder.Services.AddScoped<ICategoryService, CategoryService>();
-    builder.Services.AddScoped<IUserService, UserService>();
-    builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<ICategoryService, CategoryService>();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddTransient<Agora.Application.EventHandlers.UserRegisteredEventHandler>();
 
     builder.Services.AddAuthentication(options =>
     {
@@ -136,12 +137,19 @@ try
 
     var app = builder.Build();
 
-    // Configure the HTTP request pipeline.
-    if (app.Environment.IsDevelopment())
-    {
-        app.UseSwagger();
-        app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Agora API v1"));
-    }
+// Subscribe to events
+using (var scope = app.Services.CreateScope())
+{
+    var eventBus = scope.ServiceProvider.GetRequiredService<Agora.Domain.Interfaces.IEventBus>();
+    await eventBus.Subscribe<Agora.Domain.Events.UserRegisteredEvent, Agora.Application.EventHandlers.UserRegisteredEventHandler>();
+}
+
+// Configure the HTTP request pipeline.
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Agora API v1"));
+}
 
     app.UseHttpsRedirection();
 
