@@ -2,16 +2,19 @@
 using Agora.Domain.Entities;
 using Agora.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using Agora.Auth;
 
 namespace Agora.Application.Service;
 
 public class CategoryService : ICategoryService
 {
     private readonly AgoraDbContext _db;
+    private readonly ITokenService _tokenService;
 
-    public CategoryService(AgoraDbContext db)
+    public CategoryService(AgoraDbContext db, ITokenService tokenService)
     {
         _db = db;
+        _tokenService = tokenService;
     }
 
     public async Task<PagedResult<Category>> GetPaged(PagedRequest req)

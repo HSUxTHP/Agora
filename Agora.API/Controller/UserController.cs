@@ -116,7 +116,7 @@ public class UserController : ControllerBase
                  return BadRequest("Users cannot change their own roles.");
             }
 
-            await _service.UpdateRole(id, req);
+            await _service.UpdateRole(id, req.NewRoleId);
             return Ok();
         }
         // Bắt các lỗi liên quan đến dữ liệu (như "Invalid role ID" hoặc "User not found")

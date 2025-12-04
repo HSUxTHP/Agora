@@ -13,5 +13,5 @@ public interface IUserService
     Task<User?> UpdateSelf(int userId, UserUpdateRequest req);
     Task Delete(int id);
     Task<LoginResponse> Login(LoginRequest req);
-    Task UpdateRole(int userId, RoleUpdateRequest req);
+    Task UpdateRole(int userId, int newRoleId);
 }
