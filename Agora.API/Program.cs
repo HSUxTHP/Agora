@@ -6,11 +6,22 @@ using Agora.Auth;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using Serilog;
 
+// Cấu hình Serilog để ghi vào file
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Information() // Thiết lập mức ghi
+    .WriteTo.Console() // Ghi log ra console
+    .WriteTo.File("Logs/connection_logs.txt", rollingInterval: RollingInterval.Day) // Ghi vào file với mỗi ngày một file mới
+    .CreateLogger();
 
-var builder = WebApplication.CreateBuilder(args);
+try
+{
+    var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddDbContext<AgoraDbContext>(options =>
+    builder.Host.UseSerilog(); // Sử dụng Serilog làm logging provider
+
+    builder.Services.AddDbContext<AgoraDbContext>(options =>
     options.UseSqlServer(
         builder.Configuration.GetConnectionString("DefaultConnection")
     ));
@@ -65,6 +76,14 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapControllers();
-app.Run();
-
+    app.MapControllers();
+    app.Run();
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "Application terminated unexpectedly");
+}
+finally
+{
+    Log.CloseAndFlush();
+}
