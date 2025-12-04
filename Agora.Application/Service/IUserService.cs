@@ -10,6 +10,8 @@ public interface IUserService
     Task<User?> GetById(int id);
     Task<User> Create(User user);
     Task Update(User user);
+    Task<User?> UpdateSelf(int userId, UserUpdateRequest req);
     Task Delete(int id);
     Task<LoginResponse> Login(LoginRequest req);
+    Task UpdateRole(int userId, RoleUpdateRequest req);
 }

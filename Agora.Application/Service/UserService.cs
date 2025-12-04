@@ -237,10 +237,21 @@ public class UserService : IUserService
         }
     }
 
+    public async Task<User?> UpdateSelf(int userId, UserUpdateRequest req)
+    {
+        var user = await _db.Users.FindAsync(userId);
+        if (user == null) return null;
 
-    // PSEUDOCODE / PLAN:
-    // 1. Attempt to find the user by id using _db.Users.FindAsync(id).
-    // 2. If user is null -> return immediately (no-op).
+        if (!string.IsNullOrEmpty(req.Name)) user.Name = req.Name;
+        if (!string.IsNullOrEmpty(req.Phone)) user.Phone = req.Phone;
+        if (!string.IsNullOrEmpty(req.Email)) user.Email = req.Email;
+        if (!string.IsNullOrEmpty(req.Address)) user.Address = req.Address;
+        if (!string.IsNullOrEmpty(req.TaxCode)) user.TaxCode = req.TaxCode;
+
+        await _db.SaveChangesAsync();
+        return user;
+    }
+
     // 3. Remove the found entity from the DbSet via _db.Users.Remove(user).
     // 4. Wrap SaveChangesAsync() in try/catch:
     //    - Catch DbUpdateException and wrap it in InvalidOperationException with a clear message.
@@ -283,6 +294,11 @@ public class UserService : IUserService
             throw new Exception("Invalid password");
         }
 
+        if(user.Role == -1)
+        {
+            throw new Exception("User is banned");
+        }
+
         var token = _tokenService.GenerateToken(user);
 
         return new LoginResponse
@@ -292,5 +308,23 @@ public class UserService : IUserService
             Email = user.Email ?? "",
             Role = user.Role.ToString()
         };
+    }
+
+
+    public async Task UpdateRole(int userId, int newRoleId)
+    {
+        var user = await _db.Users.FindAsync(userId);
+        if (user == null)
+        {
+            throw new Exception("User not found");
+        }
+
+        if (newRoleId < -1 || newRoleId > 2)
+        {
+            throw new ArgumentException($"Invalid role ID: {newRoleId}. Role must be between -1 and 2."); // Assuming roles are -1 (banned), 0 (user), 1 (admin), 2 (staff)
+        }
+
+        user.Role = newRoleId;
+        await _db.SaveChangesAsync();
     }
 }
