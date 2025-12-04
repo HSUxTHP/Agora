@@ -59,6 +59,7 @@ namespace Agora.Infrastructure.Messaging
                 {
                     try
                     {
+                        _logger.LogInformation("Processing outbox message {Id} of type {Type}", message.Id, message.Type);
                         var eventType = Type.GetType(message.Type);
                         if (eventType != null)
                         {
@@ -66,7 +67,16 @@ namespace Agora.Infrastructure.Messaging
                             if (integrationEvent != null)
                             {
                                 await eventBus.Publish(integrationEvent);
+                                _logger.LogInformation("Published event {Id} to EventBus", integrationEvent.Id);
                             }
+                            else
+                            {
+                                _logger.LogWarning("Failed to deserialize message content to IntegrationEvent");
+                            }
+                        }
+                        else
+                        {
+                            _logger.LogWarning("Could not resolve type {Type}", message.Type);
                         }
 
                         message.ProcessedOn = DateTime.UtcNow;

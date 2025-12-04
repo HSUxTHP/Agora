@@ -6,6 +6,16 @@ CREATE DATABASE Agora
 
 use Agora
 
+CREATE TABLE [OutboxMessages] (
+    [Id] uniqueidentifier NOT NULL,
+    [Type] nvarchar(max) NOT NULL,
+    [Content] nvarchar(max) NOT NULL,
+    [OccurredOn] datetime2 NOT NULL,
+    [ProcessedOn] datetime2 NULL,
+    [Error] nvarchar(max) NULL,
+    CONSTRAINT [PK_OutboxMessages] PRIMARY KEY ([Id])
+);
+
 CREATE TABLE [Product] (
   [id] int PRIMARY KEY IDENTITY(1, 1),
   [name] nvarchar(255),
