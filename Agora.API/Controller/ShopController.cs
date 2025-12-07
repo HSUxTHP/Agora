@@ -22,7 +22,7 @@ public class ShopController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<PagedResult<Shop>>> GetPaged([FromQuery] PagedRequest req)
+    public async Task<ActionResult<PagedResult<ShopRequest>>> GetPaged([FromQuery] PagedRequest req)
     {
         try
         {
@@ -57,7 +57,7 @@ public class ShopController : ControllerBase
 
     [HttpPost]
     [Authorize]
-    public async Task<ActionResult<Shop>> Create(CreateShopRequest req) // Only authenticated user can create their shop
+    public async Task<ActionResult<CreateShopRequest>> Create(CreateShopRequest req) // Only authenticated user can create their shop
     {
         try
         {
