@@ -73,8 +73,8 @@ public class UserController : ControllerBase
             return BadRequest(ex.Message);
         }
     }
-
-    [Authorize(Roles = "1, 2")]
+    
+    [Authorize]
     [HttpPut("self")]
     public async Task<IActionResult> UpdateSelf([FromBody] UserUpdateRequest req)
     {
