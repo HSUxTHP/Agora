@@ -117,14 +117,31 @@ public class ImageController : ControllerBase
     }
 
     [HttpGet("{id}")]
-    public async Task<ActionResult<ImageDTO?>> GetById(int id, bool? isSmall = null, int? width = null, int? height = null)
+    public async Task<ActionResult<ImageDTO?>> GetById(int id, bool? ReSize = false, bool? isSmall = null, int? width = null, int? height = null)
     {
     try
     {
         //TODO: LÀM CACHE và HTTP ETAG ở dưới 
         _logger.LogInformation("Fetching image with ID {ImageId}.", id);
+        
+        bool reSize = ReSize ?? false;
 
-        var image = await _service.GetById(id, isSmall, width, height);
+        // Nếu isSmall = true hoặc width > 0 hoặc height > 0 → resize
+        if ((isSmall ?? false) || (width.HasValue && width.Value > 0) || (height.HasValue && height.Value > 0))
+        {
+            reSize = true;
+        }
+
+        if (reSize)
+        {
+            if (width >= 1500 || height >= 1500)
+            {
+                _logger.LogWarning($"\u001b[45mResize LARGE ID={id}:\u001b[0m Cannot resize to large dimensions (>= 1500px). Please use smaller dimensions.");
+                return StatusCode(400, "Cannot resize to large dimensions (>= 1500px). Please use smaller dimensions.");
+            }
+        }
+
+        var image = await _service.GetById(id, ReSize, isSmall, width, height);
         if (image == null)
         {
             _logger.LogWarning("Image with ID {ImageId} not found.", id);
@@ -141,6 +158,11 @@ public class ImageController : ControllerBase
 
         // Trả file ra đúng chuẩn HTTP
         return File(image.Data, "image/webp");   // đổi thành loại file của bạn
+    }
+    catch (ArgumentException ex)
+    {
+        _logger.LogError(ex, "Invalid argument while fetching image {ImageId}", id);
+        return BadRequest(ex.Message);
     }
     catch (Exception ex)
     {

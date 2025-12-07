@@ -90,7 +90,7 @@ public class ImageService : IImageService
         }
     }
 
-    public async Task<ImageDTO?> GetById(int id, bool? isSmall = null, int? width = null, int? height = null)
+    public async Task<ImageDTO?> GetById(int id, bool? ReSize = false, bool? isSmall = null, int? width = null, int? height = null)
     {
         var image = await _db.ImageFiles.FindAsync(id);
         if (image == null) return null;
@@ -101,11 +101,22 @@ public class ImageService : IImageService
             return null;
         }
 
-        return new ImageDTO
+        if(ReSize == true)
         {
-            Id = image.Id,
-            Data = ResizeIfSmall(image.Data, image.Id, isSmall, width, height)
-        };
+            return new ImageDTO
+            {
+                Id = image.Id,
+                Data = ResizeIfSmall(image.Data, image.Id, isSmall, width, height)
+            };
+        }
+        else
+        {
+            return new ImageDTO
+            {
+                Id = image.Id,
+                Data = image.Data
+            };
+        }
     }
 
     ///
