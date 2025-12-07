@@ -11,5 +11,4 @@ public class ShopUpdateRequest
         public string? Address { get; set; }
         public int? UserId { get; set; }
         public int? ImageId { get; set; }
-        public DateTime? CreatedAt { get; set; }
 }

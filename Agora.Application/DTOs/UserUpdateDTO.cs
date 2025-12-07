@@ -1,6 +1,6 @@
 namespace Agora.Application.DTOs;
 
-public class UserUpdateRequest
+public class UserUpdateDTO
 {
     public string? Name { get; set; }
     public string? Phone { get; set; }

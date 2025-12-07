@@ -24,7 +24,7 @@ public class UserController : ControllerBase
 
     [Authorize(Roles = "1, 2")]
     [HttpGet]
-    public Task<PagedResult<User>> GetPaged([FromQuery] PagedRequest req)
+    public Task<PagedResult<UserDTO>> GetPaged([FromQuery] PagedRequest req)
     {
         _logger.LogInformation("\u001b[44;97m[User]\u001b[0m Fetching paged users.");
         return _service.GetPaged(req);
@@ -32,14 +32,14 @@ public class UserController : ControllerBase
 
     [Authorize(Roles = "1, 2")]
     [HttpGet("{id}")]
-    public Task<User?> GetById(int id)
+    public Task<UserDTO?> GetById(int id)
     {
         _logger.LogInformation("\u001b[44;97m[User]\u001b[0m Fetching user with ID {UserId}.", id);
         return _service.GetById(id);
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create(User user)
+    public async Task<IActionResult> Create(UserCreateDTO user)
     {
         try
         {
@@ -57,13 +57,12 @@ public class UserController : ControllerBase
 
     [Authorize(Roles = "1, 2")]
     [HttpPut("{id}")]
-    public async Task<IActionResult> Update(int id, User user)
+    public async Task<IActionResult> Update(int id, UserUpdateDTO user)
     {
         try
         {
             _logger.LogInformation("\u001b[44;97m[User]\u001b[0m Updating user with ID {UserId}.", id);
-            user.Id = id;
-            await _service.Update(user);
+            await _service.Update(id,user);
             _logger.LogInformation("\u001b[44;97m[User]\u001b[0m User with ID {UserId} updated successfully.", id);
             return Ok();
         }
@@ -76,7 +75,7 @@ public class UserController : ControllerBase
     
     [Authorize]
     [HttpPut("self")]
-    public async Task<IActionResult> UpdateSelf([FromBody] UserUpdateRequest req)
+    public async Task<IActionResult> UpdateSelf([FromBody] UserUpdateDTO req)
     {
         try
         {
@@ -172,6 +171,28 @@ public class UserController : ControllerBase
             // Bắt các lỗi không mong muốn khác
             // Ghi log ex
             return StatusCode(500, "An unexpected error occurred: " + ex.Message); // Trả về 500 Internal Server Error
+        }
+    }
+
+    [Authorize]
+    [HttpPut("account/self")]
+    public async Task<IActionResult> UpdateAccountSelf([FromBody] UserUpdateAccount req)
+    {
+        try
+        {
+            _logger.LogInformation("\u001b[44;97m[User]\u001b[0m Updating self user account information.");
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null) return Unauthorized();
+
+            var userId = int.Parse(userIdClaim.Value);
+            await _service.UpdateAccount(userId, req);
+            _logger.LogInformation("\u001b[44;97m[User]\u001b[0m Self user account information updated successfully for user ID {UserId}.", userId);
+            return Ok();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "\u001b[44;97m[User]\u001b[0m Error occurred while updating self user account information for user.");
+            return BadRequest(ex.Message);
         }
     }
 }

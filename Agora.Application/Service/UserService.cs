@@ -38,7 +38,7 @@ public class UserService : IUserService
     // - Use the correct property name `Password` (fixes misspelling).
     // - Keep behavior consistent with other methods by providing a clear wrapped exception message.
 
-    public async Task<PagedResult<User>> GetPaged(PagedRequest req)
+    public async Task<PagedResult<UserDTO>> GetPaged(PagedRequest req)
     {
         try
         {
@@ -56,13 +56,15 @@ public class UserService : IUserService
                 .Take(req.PageSize)
                 .ToListAsync();
 
-            // Null out sensitive fields before returning
-            foreach (var item in items)
+            var userDTOs = items.Select(user => new UserDTO
             {
-                item.Password = null;
-            }
+                Id = user.Id,
+                Name = user.Name,
+                Phone = user.Phone,
+                Email = user.Email,
+            }).ToList();
 
-            return new PagedResult<User> { Total = total, Items = items };
+            return new PagedResult<UserDTO> { Total = total, Items = userDTOs };
         }
         catch (Exception ex)
         {
@@ -77,14 +79,19 @@ public class UserService : IUserService
     // 4. Return the user (or null if not found).
     // 5. On exception, throw InvalidOperationException with inner exception.
 
-    public async Task<User?> GetById(int id)
+    public async Task<UserDTO?> GetById(int id)
     {
         try
         {
             var user = await _db.Users.FirstOrDefaultAsync(x => x.Id == id);
-            if (user != null)
-                user.Password = null;
-            return user;
+            if (user == null) return null;
+            return new UserDTO
+            {
+                Id = user.Id,
+                Name = user.Name,
+                Phone = user.Phone,
+                Email = user.Email,
+            };
         }
         catch (Exception ex)
         {
@@ -92,7 +99,7 @@ public class UserService : IUserService
         }
     }
 
-    public async Task<User> Create(User user)
+    public async Task<UserCreateDTO> Create(UserCreateDTO user)
     {
         if (user == null)
             throw new ArgumentNullException(nameof(user));
@@ -113,13 +120,20 @@ public class UserService : IUserService
         if (!string.IsNullOrWhiteSpace(user.TaxCode) && await _db.Users.AnyAsync(x => x.TaxCode == user.TaxCode))
             throw new ArgumentException("Tax code already exists", nameof(user.TaxCode));
 
-        if (user.Role == null)
-            user.Role = 0; // Default role
+        var newUser = new User
+        {
+            Name = user.Name?.Trim(),
+            Phone = string.IsNullOrWhiteSpace(user.Phone) ? null : user.Phone.Trim(),
+            Email = string.IsNullOrWhiteSpace(user.Email) ? null : user.Email.Trim(),
+            Address = user.Address?.Trim(),
+            TaxCode = string.IsNullOrWhiteSpace(user.TaxCode) ? null : user.TaxCode.Trim(),
+            Username = string.IsNullOrWhiteSpace(user.Username) ? null : user.Username.Trim(),
+        };
 
-        user.Password = PasswordHasher.Hash(user.Password);
-        user.CreatedAt = DateTime.UtcNow;
+        newUser.Password = PasswordHasher.Hash(user.Password);
+        newUser.CreatedAt = DateTime.UtcNow;
 
-        _db.Users.Add(user);
+        _db.Users.Add(newUser);
 
         // Create Outbox Message
         if (!string.IsNullOrEmpty(user.Email))
@@ -177,19 +191,18 @@ public class UserService : IUserService
     // - Only perform uniqueness checks when the value is provided and different from existing to avoid false positives.
     // - Keep behavior consistent with Create's error wrapping for DB update errors.
 
-    public async Task Update(User user)
+    public async Task Update(int id, UserUpdateDTO user)
     {
         if (user == null)
             throw new ArgumentNullException(nameof(user));
 
-        var existing = await _db.Users.FindAsync(user.Id);
+        var existing = await _db.Users.FindAsync(id);
 
         if (existing == null)
-            throw new ArgumentException("Cannot find user", nameof(user.Id));
+            throw new ArgumentException("Cannot find user", nameof(id));
 
         // Normalize inputs (optional trimming)
         string? newEmail = string.IsNullOrWhiteSpace(user.Email) ? null : user.Email.Trim();
-        string? newUsername = string.IsNullOrWhiteSpace(user.Username) ? null : user.Username.Trim();
         string? newPhone = string.IsNullOrWhiteSpace(user.Phone) ? null : user.Phone.Trim();
         string? newTaxCode = string.IsNullOrWhiteSpace(user.TaxCode) ? null : user.TaxCode.Trim();
 
@@ -200,11 +213,6 @@ public class UserService : IUserService
                 throw new ArgumentException("Email already exists", nameof(user.Email));
         }
 
-        if (!string.IsNullOrEmpty(newUsername) && !string.Equals(newUsername, existing.Username, StringComparison.OrdinalIgnoreCase))
-        {
-            if (await _db.Users.AnyAsync(x => x.Id != existing.Id && x.Username == newUsername))
-                throw new ArgumentException("Username already exists", nameof(user.Username));
-        }
 
         if (!string.IsNullOrEmpty(newPhone) && !string.Equals(newPhone, existing.Phone, StringComparison.OrdinalIgnoreCase))
         {
@@ -221,23 +229,12 @@ public class UserService : IUserService
         // Update fields
         existing.Name = user.Name?.Trim();
         existing.Email = newEmail;
-        existing.Username = newUsername;
         existing.Phone = newPhone;
         existing.TaxCode = newTaxCode;
         existing.Address = user.Address?.Trim();
-        existing.ImageId = user.ImageId;
 
-        // Role: if incoming value is null, preserve existing; if still null, default to 0
-        if (user.Role.HasValue)
-            existing.Role = user.Role;
-        else if (!existing.Role.HasValue)
-            existing.Role = 0;
+        var updatedUser = _db.Users.Update(existing);
 
-        // If password provided -> hash and set. Do NOT require password on update.
-        if (!string.IsNullOrWhiteSpace(user.Password))
-        {
-            existing.Password = PasswordHasher.Hash(user.Password);
-        }
 
         try
         {
@@ -254,7 +251,7 @@ public class UserService : IUserService
         }
     }
 
-    public async Task<User?> UpdateSelf(int userId, UserUpdateRequest req)
+    public async Task<UserDTO?> UpdateSelf(int userId, UserUpdateDTO req)
     {
         var user = await _db.Users.FindAsync(userId);
         if (user == null) return null;
@@ -266,7 +263,17 @@ public class UserService : IUserService
         if (!string.IsNullOrEmpty(req.TaxCode)) user.TaxCode = req.TaxCode;
 
         await _db.SaveChangesAsync();
-        return user;
+        
+        return new UserDTO
+        {
+            Id = user.Id,
+            Name = user.Name,
+            Phone = user.Phone,
+            Email = user.Email,
+            Address = user.Address,
+            TaxCode = user.TaxCode,
+            Role = user.Role
+        };
     }
 
     // 3. Remove the found entity from the DbSet via _db.Users.Remove(user).
@@ -300,7 +307,7 @@ public class UserService : IUserService
     //TODO: ĐĂNG NHẬP
     public async Task<LoginResponse> Login(LoginRequest req)
     {
-        var user = await _db.Users.FirstOrDefaultAsync(x => x.Email == req.Email);
+        var user = await _db.Users.FirstOrDefaultAsync(x => x.Email == req.UsernameOrEmail || x.Username == req.UsernameOrEmail);
         if (user == null)
         {
             throw new Exception("User not found");
@@ -342,6 +349,32 @@ public class UserService : IUserService
         }
 
         user.Role = newRoleId;
+        await _db.SaveChangesAsync();
+    }
+
+    public async Task UpdateAccount(int userId, UserUpdateAccount req)
+    {
+        var user = await _db.Users.FindAsync(userId);
+        if (user == null)
+        {
+            throw new Exception("User not found");
+        }
+
+        if (!string.IsNullOrWhiteSpace(req.Username))
+        {
+            // Check if the new username is already taken by another user
+            if (await _db.Users.AnyAsync(x => x.Id != userId && x.Username == req.Username))
+            {
+                throw new ArgumentException("Username already exists", nameof(req.Username));
+            }
+            user.Username = req.Username;
+        }
+
+        if (!string.IsNullOrWhiteSpace(req.Password))
+        {
+            user.Password = PasswordHasher.Hash(req.Password);
+        }
+
         await _db.SaveChangesAsync();
     }
 }

@@ -154,7 +154,6 @@ public class ShopService : IShopService
 
 
         shop.ImageId = req.ImageId ?? shop.ImageId;
-        shop.CreatedAt = req.CreatedAt ?? shop.CreatedAt;
         _db.Shops.Update(shop);
         await _db.SaveChangesAsync();
     }
