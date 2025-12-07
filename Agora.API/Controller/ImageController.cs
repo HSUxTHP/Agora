@@ -117,13 +117,14 @@ public class ImageController : ControllerBase
     }
 
     [HttpGet("{id}")]
-    public async Task<ActionResult<ImageDTO?>> GetById(int id)
+    public async Task<ActionResult<ImageDTO?>> GetById(int id, bool? isSmall = null, int? width = null, int? height = null)
     {
     try
     {
+        //TODO: LÀM CACHE và HTTP ETAG ở dưới 
         _logger.LogInformation("Fetching image with ID {ImageId}.", id);
 
-        var image = await _service.GetById(id);
+        var image = await _service.GetById(id, isSmall, width, height);
         if (image == null)
         {
             _logger.LogWarning("Image with ID {ImageId} not found.", id);
@@ -135,6 +136,8 @@ public class ImageController : ControllerBase
             _logger.LogWarning("Image data is null for ID {ImageId}.", id);
             return BadRequest("Image data is empty.");
         }
+
+        //TODO: LÀM CACHE và HTTP ETAG ở trên 
 
         // Trả file ra đúng chuẩn HTTP
         return File(image.Data, "image/webp");   // đổi thành loại file của bạn

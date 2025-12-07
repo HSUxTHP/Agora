@@ -12,5 +12,6 @@ public interface IImageService
     Task UpdateUserImage(int userId, IFormFile file);
     Task UpdateShopImage(int shopId, IFormFile file);
 
-    Task<ImageDTO?> GetById(int id);
+    Task<ImageDTO?> GetById(int id, bool? isSmall = null, int? width = null, int? height = null);
+
 }
