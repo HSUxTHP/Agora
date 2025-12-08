@@ -15,7 +15,10 @@ public interface IShopService
 
     Task<ShopRequest?> GetByUserId(int userId);
 
+    Task<ShopRequest?> GetByProductId(int productId);
+
     Task ChangeStatus(int shopId, int status);
 
     Task UpdateImage(int shopId, int imageId);
+
 }

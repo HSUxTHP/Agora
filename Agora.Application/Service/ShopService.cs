@@ -275,4 +275,35 @@ public class ShopService : IShopService
             throw;
         }
     }
+
+    public async Task<ShopRequest?> GetByProductId(int productId)
+    {
+        try
+        {
+            var product = await _db.Products.FirstOrDefaultAsync(x => x.Id == productId);
+            if (product == null) return null;
+
+            var shop = await _db.Shops.FirstOrDefaultAsync(x => x.Id == product.ShopId);
+            if (shop == null) return null;
+
+            return new ShopRequest
+            {
+                Id = shop.Id,
+                Name = shop.Name,
+                ContactName = shop.ContactName,
+                Phone = shop.Phone,
+                Email = shop.Email,
+                TaxCode = shop.TaxCode,
+                Address = shop.Address,
+                UserId = shop.UserId,
+                ImageId = shop.ImageId,
+                Status = shop.Status
+            };
+        }
+        catch (System.Exception)
+        {
+            
+            throw;
+        }
+    }
 }
