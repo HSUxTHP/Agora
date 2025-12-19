@@ -34,7 +34,7 @@ namespace Agora.Application.Service
                     {
                         Success = existingPayment.Status == "Completed",
                         Message = "Payment already processed (Idempotent)",
-                        TransactionId = existingPayment.TransactionId,
+                        TransactionId = existingPayment.TransactionId ?? string.Empty,
                         PaymentId = existingPayment.Id
                     };
                 }

@@ -5,6 +5,7 @@ using Agora.Application.DTOs;
 using Agora.Domain.Entities;
 using Agora.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using Agora.Application.Common;
 
 namespace Agora.Application.Service
 {
@@ -21,7 +22,7 @@ namespace Agora.Application.Service
         {
             // 1. Get Cart and CartItems
             var cart = await _context.Carts
-                .Include(c => c.CartItems)
+                .Include(c => c.CartItems!)
                 .ThenInclude(i => i.Product)
                 .FirstOrDefaultAsync(c => c.UserId == request.UserId);
 
@@ -97,6 +98,110 @@ namespace Agora.Application.Service
                 TotalAmount = totalAmount,
                 Message = "Order created successfully. Please proceed to payment."
             };
+        }
+
+        public async Task<PagedResult<OrderDTO>> GetOrders(int userId, PagedRequest req)
+        {
+            try
+            {
+                var query = _context.Orders
+                    .Where(o => o.UserId == userId);
+    
+                if (!string.IsNullOrEmpty(req.Search))
+                {
+                    query = query.Where(o => o.Id.ToString().Contains(req.Search));
+                }
+                var total = await query.CountAsync();
+    
+                var items = await query
+                    .Skip((req.Page - 1) * req.PageSize)
+                    .Take(req.PageSize)
+                    .ToListAsync();
+    
+                var orderDtos = items.Select(o => new OrderDTO
+                {
+                    Id = o.Id,
+                    UserId = o.UserId,
+                    OrderDate = o.OrderDate,
+                    TotalAmount = o.TotalAmount,
+                    Discount = o.Discount,
+                    Tax = o.Tax,
+                    ShippingFee = o.ShippingFee,
+                    PaymentMethod = o.PaymentMethod,
+                    PaymentStatus = o.PaymentStatus,
+                    OrderStatus = o.OrderStatus,
+                    Note = o.Note,
+                    CreatedAt = o.CreatedAt,
+                    UpdatedAt = o.UpdatedAt
+                }).ToList();
+    
+                return new PagedResult<OrderDTO>
+                {
+                    Items = orderDtos,
+                    Total = total
+                };
+            }
+            catch (Exception)
+            {
+                
+                throw;
+            }
+        }
+
+        public async Task<OrderDetailDTO> GetOrderDetail(int orderId)
+        {
+            try
+            {
+                var order = await _context.Orders
+                    .FirstOrDefaultAsync(o => o.Id == orderId);
+    
+                if (order == null)
+                {
+                    throw new Exception("Order not found");
+                }
+    
+                var orderItems = await _context.OrderItems
+                    .Where(oi => oi.OrderId == orderId)
+                    .ToListAsync();
+    
+                var orderDto = new OrderDTO
+                {
+                    Id = order.Id,
+                    UserId = order.UserId,
+                    OrderDate = order.OrderDate,
+                    TotalAmount = order.TotalAmount,
+                    Discount = order.Discount,
+                    Tax = order.Tax,
+                    ShippingFee = order.ShippingFee,
+                    PaymentMethod = order.PaymentMethod,
+                    PaymentStatus = order.PaymentStatus,
+                    OrderStatus = order.OrderStatus,
+                    Note = order.Note,
+                    CreatedAt = order.CreatedAt,
+                    UpdatedAt = order.UpdatedAt
+                };
+    
+                var orderItemDtos = orderItems.Select(oi => new OrderItemDTO
+                {
+                    Id = oi.Id,
+                    OrderId = oi.OrderId,
+                    ProductId = oi.ProductId,
+                    Quantity = oi.Quantity,
+                    UnitPrice = oi.UnitPrice,
+                    Discount = oi.Discount,
+                    Total = oi.Total
+                }).ToList();
+    
+                return new OrderDetailDTO
+                {
+                    Order = orderDto,
+                    OrderItems = orderItemDtos
+                };
+            }
+            catch (Exception)
+            {
+                throw;
+            }
         }
     }
 }
