@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Agora API Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            padding: 40px;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            max-width: 600px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        button {
+            padding: 10px 16px;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #1e40af;
+        }
+
+        pre {
+            background: #111827;
+            color: #e5e7eb;
+            padding: 12px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>Agora API Demo UI</h2>
+    <p>Click the button to call the API.</p>
+
+    <button onclick="loadData()">Call API</button>
+
+    <pre id="result">Waiting for response...</pre>
+</div>
+
+<script>
+    async function loadData() {
+        const result = document.getElementById("result");
+        result.textContent = "Loading...";
+
+        try {
+            const response = await fetch("/api/Product");
+            const data = await response.text();
+
+            result.textContent =
+                "Status: " + response.status + "\n\n" +
+                "Headers:\n" +
+                [...response.headers.entries()]
+                    .map(h => h[0] + ": " + h[1])
+                    .join("\n") +
+                "\n\nBody:\n" + data;
+        } catch (err) {
+            result.textContent = "Error: " + err;
+        }
+    }
+</script>
+
+</body>
+</html>
