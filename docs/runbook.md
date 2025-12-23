@@ -2,17 +2,6 @@
 
 **Agora** là dự án được xây dựng dựa trên kiến trúc **N-Layers / Clean Architecture**, tập trung vào sự tách biệt giữa các mối quan tâm (Separation of Concerns) và khả năng mở rộng.
 
-## 🏗 Kiến trúc Dự án
-
-Solution được chia thành các tầng chức năng rõ ràng:
-
-* **Agora.Domain**: Chứa các Entities, Interfaces và Core Logic.
-* **Agora.Application**: Chứa Business Logic, DTOs, Services.
-* **Agora.Infrastructure**: Xử lý Database Context, Repositories, External Services.
-* **Agora.Auth**: Module xử lý xác thực và phân quyền.
-* **Agora.Payment**: Module tích hợp thanh toán.
-* **Agora.API**: Entry point của ứng dụng (Web API).
-
 ---
 
 ## 🚀 Getting Started
@@ -77,9 +66,4 @@ Agora/
 ├── docs/                    # Docs
 └── .gitignore              # Git ignore rules
 ```
-
-## Connection Layer
-<p align="center">
-  <img src="docs/LayerConnect.png" width="400">
-</p>
 

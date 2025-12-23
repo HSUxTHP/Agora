@@ -6,6 +6,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Caching.Memory;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace Agora.API.Controllers;
 
@@ -17,13 +20,15 @@ public class ImageController : ControllerBase
     private readonly IShopService _shopService;
     private readonly IProductService _productService;
     private readonly ILogger<ImageController> _logger;
+    private readonly IMemoryCache _cache;
 
-    public ImageController(IImageService service, IShopService shopService, IProductService productService, ILogger<ImageController> logger)
+    public ImageController(IImageService service, IShopService shopService, IProductService productService, ILogger<ImageController> logger, IMemoryCache cache)
     {
         _service = service;
         _shopService = shopService;
         _productService = productService;
         _logger = logger;
+        _cache = cache;
     }
 
     [Authorize]
@@ -37,7 +42,11 @@ public class ImageController : ControllerBase
             if (userIdClaim == null) return Unauthorized();
 
             var userId = int.Parse(userIdClaim.Value);
-            await _service.UpdateUserImage(userId, file);
+            var oldImageId = await _service.UpdateUserImage(userId, file);
+            if (oldImageId.HasValue)
+            {
+                _cache.Remove($"ImagesImage{oldImageId}");
+            }
             _logger.LogInformation("\u001b[32m[IMAGE]\u001b[0mSelf user image updated successfully for user ID {UserId}.", userId);
             return Ok();
         }
@@ -55,7 +64,11 @@ public class ImageController : ControllerBase
         try
         {
             _logger.LogInformation("\u001b[32m[IMAGE]\u001b[0mUpdating image for user ID: {UserId}", userId);
-            await _service.UpdateUserImage(userId, file);
+            var oldImageId = await _service.UpdateUserImage(userId, file);
+            if (oldImageId.HasValue)
+            {
+                _cache.Remove($"ImagesImage{oldImageId}");
+            }
             _logger.LogInformation("\u001b[32m[IMAGE]\u001b[0mImage for user ID: {UserId} updated successfully.", userId);
             return Ok();
         }
@@ -73,7 +86,11 @@ public class ImageController : ControllerBase
         try
         {
             _logger.LogInformation("\u001b[32m[IMAGE]\u001b[0mUpdating image for shop ID: {ShopId}", shopId);
-            await _service.UpdateShopImage(shopId, file);
+            var oldImageId = await _service.UpdateShopImage(shopId, file);
+            if (oldImageId.HasValue)
+            {
+                _cache.Remove($"ImagesImage{oldImageId}");
+            }
             _logger.LogInformation("\u001b[32m[IMAGE]\u001b[0mImage for shop ID: {ShopId} updated successfully.", shopId);
             return Ok();
         }
@@ -107,7 +124,11 @@ public class ImageController : ControllerBase
                 return NotFound("Shop not found for this user");
             }
 
-            await _service.UpdateShopImage(shop.Id, file);
+            var oldImageId = await _service.UpdateShopImage(shop.Id, file);
+            if (oldImageId.HasValue)
+            {
+                _cache.Remove($"ImagesImage{oldImageId}");
+            }
             _logger.LogInformation("\u001b[32m[IMAGE]\u001b[0mShop image for shop ID: {ShopId} updated successfully by user ID: {UserId}.", shop.Id, userId);
             return Ok();
         }
@@ -125,7 +146,11 @@ public class ImageController : ControllerBase
         try
         {
             _logger.LogInformation("\u001b[32m[IMAGE]\u001b[0mUpdating image for product ID: {ProductId}", productId);
-            await _service.UpdateProductImage(productId, file);
+            var oldImageId = await _service.UpdateProductImage(productId, file);
+            if (oldImageId.HasValue)
+            {
+                _cache.Remove($"ImagesImage{oldImageId}");
+            }
             _logger.LogInformation("\u001b[32m[IMAGE]\u001b[0mImage for product ID: {ProductId} updated successfully.", productId);
             return Ok();
         }
@@ -182,7 +207,11 @@ public class ImageController : ControllerBase
             if (product.Id <= 0)
                 return BadRequest("Invalid product ID.");
 
-            await _service.UpdateProductImage(product.Id, file);
+            var oldImageId = await _service.UpdateProductImage(product.Id, file);
+            if (oldImageId.HasValue)
+            {
+                _cache.Remove($"ImagesImage{oldImageId}");
+            }
             _logger.LogInformation("\u001b[32m[IMAGE]\u001b[0mProduct image for product ID: {ProductId} updated successfully by user ID: {UserId}.", product.Id, userId);
             return Ok();
         }
@@ -196,55 +225,103 @@ public class ImageController : ControllerBase
     [HttpGet("{id}")]
     public async Task<ActionResult<ImageDTO?>> GetById(int id, bool? ReSize = false, bool? isSmall = null, int? width = null, int? height = null)
     {
-    try
-    {
-        //TODO: LÀM CACHE và HTTP ETAG ở dưới 
         _logger.LogInformation("\u001b[32m[IMAGE]\u001b[0mFetching image with ID {ImageId}.", id);
-        
-        bool reSize = ReSize ?? false;
-
-        // Nếu isSmall = true hoặc width > 0 hoặc height > 0 → resize
-        if ((isSmall ?? false) || (width.HasValue && width.Value > 0) || (height.HasValue && height.Value > 0))
+        try
         {
-            reSize = true;
-        }
+            string cacheKey = $"ImagesImage{id}";
 
-        if (reSize)
-        {
-            if (width >= 1500 || height >= 1500)
+            bool reSize = ReSize ?? false;
+
+            // Nếu isSmall = true hoặc width > 0 hoặc height > 0 → resize
+            if ((isSmall ?? false) || (width.HasValue && width.Value > 0) || (height.HasValue && height.Value > 0))
             {
-                _logger.LogWarning($"\u001b[45mResize LARGE ID={id}:\u001b[0m Cannot resize to large dimensions (>= 1500px). Please use smaller dimensions.");
-                return StatusCode(400, "Cannot resize to large dimensions (>= 1500px). Please use smaller dimensions.");
+                reSize = true;
             }
-        }
 
-        var image = await _service.GetById(id, ReSize, isSmall, width, height);
-        if (image == null)
+            // Lấy toàn bộ phiên bản ảnh của id này từ cache
+            if (!_cache.TryGetValue(cacheKey, out Dictionary<(bool?, bool?, int?, int?), (byte[] ImageData, string ETag)>? allVersions))
+            {
+                allVersions = new Dictionary<(bool?, bool?, int?, int?), (byte[], string)>();
+            }
+
+            var versionKey = (reSize, isSmall, width, height);
+
+            // Nếu phiên bản này chưa có trong cache thì tạo mới
+            if (!allVersions!.TryGetValue(versionKey, out var cacheEntry))
+            {
+                if (reSize)
+                {
+                    if (width >= 1500 || height >= 1500)
+                    {
+                        _logger.LogWarning($"\u001b[45mResize LARGE ID={id}:\u001b[0m Cannot resize to large dimensions (>= 1500px). Please use smaller dimensions.");
+                        return StatusCode(400, "Cannot resize to large dimensions (>= 1500px). Please use smaller dimensions.");
+                    }
+                }
+
+                _logger.LogInformation("\u001b[32m[IMAGE]\u001b[0mFetching image with ID {ImageId} from service.", id);
+                var image = await _service.GetById(id, ReSize, isSmall, width, height);
+                
+                if (image == null)
+                {
+                    _logger.LogWarning("Image with ID {ImageId} not found.", id);
+                    return NotFound();
+                }
+
+                if (image.Data == null)
+                {
+                    _logger.LogWarning("\u001b[32m[IMAGE]\u001b[0mImage data is null for ID {ImageId}.", id);
+                    return BadRequest("Image data is empty.");
+                }
+
+                byte[] imageData = image.Data;
+                string hash = ComputeHash(imageData);
+
+                string eTag = $"\"{id}-{hash}-ReSize={reSize}-isSmall={isSmall}-Width={width}-Height={height}\"";
+                _logger.LogInformation($"\u001b[45mGenerated ETag:\u001b[0m {eTag}");
+
+                cacheEntry = (imageData, eTag);
+                allVersions[versionKey] = cacheEntry;
+
+                var cacheOptions = new MemoryCacheEntryOptions()
+                    .SetSize(1) // each entry size is 1
+                    .SetAbsoluteExpiration(TimeSpan.FromMinutes(30)) // expire after 30 minutes
+                    .SetSlidingExpiration(TimeSpan.FromMinutes(10)); // expire if not accessed for 10 minutes
+
+                _cache.Set(cacheKey, allVersions, cacheOptions);
+            }
+
+            // Nếu client gửi ETag khớp thì trả 304
+            if (Request.Headers.TryGetValue("If-None-Match", out var incomingETag) && incomingETag == cacheEntry.ETag)
+            {
+                _logger.LogInformation($"\u001b[45m304 Not Modified, ETag:\u001b[0m {cacheEntry.ETag}");
+                return StatusCode(304);
+            }
+
+            // Thiết lập header
+            Response.Headers["Cache-Control"] = "public, must-revalidate, max-age=0";
+            Response.Headers["Expires"] = DateTime.UtcNow.AddDays(1).ToString("R");
+            Response.Headers["ETag"] = cacheEntry.ETag;
+
+            return File(cacheEntry.ImageData, "image/webp");
+        }
+        catch (ArgumentException ex)
         {
-            _logger.LogWarning("Image with ID {ImageId} not found.", id);
-            return NotFound();
+            _logger.LogError(ex, "\u001b[32m[IMAGE]\u001b[0mInvalid argument while fetching image {ImageId}", id);
+            return BadRequest(ex.Message);
         }
-
-        if (image.Data == null)
+        catch (Exception ex)
         {
-            _logger.LogWarning("Image data is null for ID {ImageId}.", id);
-            return BadRequest("Image data is empty.");
+            _logger.LogError(ex, "\u001b[32m[IMAGE]\u001b[0mError while fetching image {ImageId}", id);
+            return StatusCode(500, "Internal Server Error");
         }
+    }
 
-        //TODO: LÀM CACHE và HTTP ETAG ở trên 
-
-        // Trả file ra đúng chuẩn HTTP
-        return File(image.Data, "image/webp");   // đổi thành loại file của bạn
-    }
-    catch (ArgumentException ex)
+    private string ComputeHash(byte[] data)
     {
-        _logger.LogError(ex, "Invalid argument while fetching image {ImageId}", id);
-        return BadRequest(ex.Message);
-    }
-    catch (Exception ex)
-    {
-        _logger.LogError(ex, "Error while fetching image {ImageId}", id);
-        return StatusCode(500, "Internal Server Error");
-    }
+        using (var sha256 = SHA256.Create())
+        {
+            var hash = sha256.ComputeHash(data);
+            return Convert.ToBase64String(hash);
+        }
     }
 }

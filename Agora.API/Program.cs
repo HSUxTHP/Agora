@@ -28,6 +28,11 @@ try
         builder.Configuration.GetConnectionString("DefaultConnection")
     ));
 
+    builder.Services.AddMemoryCache(options =>
+    {
+        options.SizeLimit = 1000; // Tổng dung lượng tối đa của cache
+    });
+
     builder.Services.AddControllers()
         .AddJsonOptions(options =>
         {
@@ -67,17 +72,17 @@ try
     builder.Services.AddInfrastructure(builder.Configuration);
 
 
-builder.Services.AddScoped<ICategoryService, CategoryService>();
-builder.Services.AddScoped<IShopService, ShopService>();
-builder.Services.AddScoped<IProductService, ProductService>();
-builder.Services.AddScoped<IUserService, UserService>();
-builder.Services.AddScoped<IImageService, ImageService>();
-builder.Services.AddScoped<ICartService, CartService>();
-builder.Services.AddScoped<IOrderService, OrderService>();
-builder.Services.AddScoped<IPaymentService, PaymentService>();
-builder.Services.AddScoped<ITokenService, TokenService>();
-builder.Services.AddTransient<Agora.Application.EventHandlers.UserRegisteredEventHandler>();
-builder.Services.AddTransient<Agora.Application.EventHandlers.PaymentCompletedEventHandler>();
+    builder.Services.AddScoped<ICategoryService, CategoryService>();
+    builder.Services.AddScoped<IShopService, ShopService>();
+    builder.Services.AddScoped<IProductService, ProductService>();
+    builder.Services.AddScoped<IUserService, UserService>();
+    builder.Services.AddScoped<IImageService, ImageService>();
+    builder.Services.AddScoped<ICartService, CartService>();
+    builder.Services.AddScoped<IOrderService, OrderService>();
+    builder.Services.AddScoped<IPaymentService, PaymentService>();
+    builder.Services.AddScoped<ITokenService, TokenService>();
+    builder.Services.AddTransient<Agora.Application.EventHandlers.UserRegisteredEventHandler>();
+    builder.Services.AddTransient<Agora.Application.EventHandlers.PaymentCompletedEventHandler>();
 
     builder.Services.AddAuthentication(options =>
     {
@@ -148,20 +153,20 @@ builder.Services.AddTransient<Agora.Application.EventHandlers.PaymentCompletedEv
 
     var app = builder.Build();
 
-// Subscribe to events
-using (var scope = app.Services.CreateScope())
-{
-    var eventBus = scope.ServiceProvider.GetRequiredService<Agora.Domain.Interfaces.IEventBus>();
-    await eventBus.Subscribe<Agora.Domain.Events.UserRegisteredEvent, Agora.Application.EventHandlers.UserRegisteredEventHandler>();
-    await eventBus.Subscribe<Agora.Domain.Events.PaymentCompletedEvent, Agora.Application.EventHandlers.PaymentCompletedEventHandler>();
-}
+    // Subscribe to events
+    using (var scope = app.Services.CreateScope())
+    {
+        var eventBus = scope.ServiceProvider.GetRequiredService<Agora.Domain.Interfaces.IEventBus>();
+        await eventBus.Subscribe<Agora.Domain.Events.UserRegisteredEvent, Agora.Application.EventHandlers.UserRegisteredEventHandler>();
+        await eventBus.Subscribe<Agora.Domain.Events.PaymentCompletedEvent, Agora.Application.EventHandlers.PaymentCompletedEventHandler>();
+    }
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Agora API v1"));
-}
+    // Configure the HTTP request pipeline.
+    if (app.Environment.IsDevelopment())
+    {
+        app.UseSwagger();
+        app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Agora API v1"));
+    }
 
     app.UseHttpsRedirection();
 

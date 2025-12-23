@@ -54,7 +54,7 @@ public class ImageService : IImageService
         }
     }
 
-    public async Task UpdateUserImage(int userId, IFormFile file)
+    public async Task<int?> UpdateUserImage(int userId, IFormFile file)
     {
         var user = await _db.Users.FindAsync(userId);
         if (user == null) throw new Exception("User not found");
@@ -70,9 +70,10 @@ public class ImageService : IImageService
         {
             await Delete(oldImageId.Value);
         }
+        return oldImageId;
     }
 
-    public async Task UpdateShopImage(int shopId, IFormFile file)
+    public async Task<int?> UpdateShopImage(int shopId, IFormFile file)
     {
         var shop = await _db.Shops.FindAsync(shopId);
         if (shop == null) throw new Exception("Shop not found");
@@ -88,9 +89,10 @@ public class ImageService : IImageService
         {
             await Delete(oldImageId.Value);
         }
+        return oldImageId;
     }
 
-    public async Task UpdateProductImage(int productId, IFormFile file)
+    public async Task<int?> UpdateProductImage(int productId, IFormFile file)
     {
         var product = await _db.Products.FindAsync(productId);
         if (product == null) throw new Exception("Product not found");
@@ -106,6 +108,7 @@ public class ImageService : IImageService
         {
             await Delete(oldImageId.Value);
         }
+        return oldImageId;
     }
 
     public async Task<ImageDTO?> GetById(int id, bool? ReSize = false, bool? isSmall = null, int? width = null, int? height = null)
