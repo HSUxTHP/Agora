@@ -87,6 +87,11 @@ public class ProductController : ControllerBase
             _logger.LogInformation("\u001b[32m[PRODUCT]\u001b[0mProduct created successfully with ID: {ProductId}", createdProduct.Id);
             return CreatedAtAction(nameof(GetById), new { id = createdProduct.Id }, createdProduct);
         }
+        catch (ArgumentException ex)
+        {
+            _logger.LogWarning("\u001b[32m[PRODUCT]\u001b[0mProduct creation failed due to invalid input: {Message}", ex.Message);
+            return BadRequest(ex.Message);
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "\u001b[32m[PRODUCT]\u001b[0mAn error occurred while creating a new product.");

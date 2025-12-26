@@ -19,7 +19,7 @@ namespace Agora.Domain.Entities
         // Tôi để string để hợp lý hóa logic, bạn nên kiểm tra lại kiểu dữ liệu trong SQL.
         public string? Password { get; set; }
 
-        public int? Role { get; set; }
+        public int? Role { get; set; } // 0: User, 1: Admin, 2:staff
         public int? ImageId { get; set; }
         public DateTime? CreatedAt { get; set; }
 

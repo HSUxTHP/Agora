@@ -232,6 +232,11 @@ public class ImageController : ControllerBase
 
             bool reSize = ReSize ?? false;
 
+            if(isSmall == null)
+            {
+                isSmall = false;
+            }
+
             // Nếu isSmall = true hoặc width > 0 hoặc height > 0 → resize
             if ((isSmall ?? false) || (width.HasValue && width.Value > 0) || (height.HasValue && height.Value > 0))
             {

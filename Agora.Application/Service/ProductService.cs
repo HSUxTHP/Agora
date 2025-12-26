@@ -130,6 +130,11 @@ public class ProductService : IProductService
     {
         try
         {
+            if(await _db.Products.AnyAsync(x => x.Barcode == request.Barcode || x.Name == request.Name))
+            {
+                throw new ArgumentException("Product with the same name or barcode already exists.");
+            }
+
             var product = new Product
             {
                 Name = request.Name,
@@ -145,6 +150,7 @@ public class ProductService : IProductService
                 Note = request.Note,
                 CreatedAt = DateTime.Now,
                 UpdatedAt = DateTime.Now,
+                SoldQty = 0,
                 Status = 0 // Default status
             };
 
@@ -171,6 +177,10 @@ public class ProductService : IProductService
                 SoldQty = product.SoldQty,
                 Status = product.Status
             };
+        }
+        catch (ArgumentException)
+        {
+            throw;
         }
         catch (Exception)
         {
