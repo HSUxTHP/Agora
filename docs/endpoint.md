@@ -1,5 +1,5 @@
 # UserController Endpoints
-
+[Swagger](https://localhost:5000/Swagger/index.html)
 ---
 
 ### Get Paged Users
